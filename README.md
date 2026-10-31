@@ -57,7 +57,7 @@ git clone --recurse-submodules
 Репозиторий содержит workflow `.github/workflows/build.yml`, который собирает APK и автоматически прикреплляет их к GitHub Release:
 
 - **Релиз**: создайте и запушьте тег вида `v1.8.2` — соберутся release-APK (universal + по ABI), создастся Release с файлами и SHA-256 суммами.
-- **Мастер / вручную**: push в `master` или запуск через вкладку *Actions → Build APK → Run workflow* создаст pre-release (тег автогенерируется из версии и короткого коммита, можно задать свой).
+- **Вручную**: запуск через вкладку *Actions → Build APK → Run workflow* создаст pre-release (тег автогенерируется из версии и короткого коммита, можно задать свой).
 - **Подпись release-APK** (опционально): без ключей APK собираются неподписанными. Чтобы подписывать, добавьте в репозитории *Settings → Secrets and variables → Actions* секреты:
   - `BYEDPI_KEYSTORE_BASE64` — keystore, закодированный в base64 (`base64 -w0 byedpi.keystore`);
   - `BYEDPI_KEYSTORE_STORE_PASSWORD`, `BYEDPI_KEYSTORE_KEY_ALIAS`, `BYEDPI_KEYSTORE_KEY_PASSWORD`.
