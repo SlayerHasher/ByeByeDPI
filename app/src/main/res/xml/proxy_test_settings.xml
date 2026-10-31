@@ -35,6 +35,14 @@
         app:iconSpaceReserved="false" />
 
     <EditTextPreference
+        android:key="byedpi_proxytest_strategy_budget"
+        android:title="@string/test_strategy_budget"
+        android:inputType="number"
+        android:defaultValue="60"
+        app:useSimpleSummaryProvider="true"
+        app:iconSpaceReserved="false" />
+
+    <EditTextPreference
         android:key="byedpi_proxytest_sni"
         android:title="@string/test_settings_sni"
         android:inputType="text"

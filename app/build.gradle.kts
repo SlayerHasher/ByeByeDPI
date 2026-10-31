@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -6,6 +7,21 @@ plugins {
 }
 
 val abis = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+
+// Release signing: reads keystore credentials from GitHub Actions secrets
+// (exposed to Gradle as BYEDPI_KEYSTORE_* env vars) or from a local
+// keystore.properties file for offline builds. Falls back to unsigned
+// release APKs when no credentials are provided.
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties().apply {
+    if (keystorePropsFile.exists()) keystorePropsFile.inputStream().use { load(it) }
+}
+
+fun keystoreValue(key: String): String? =
+    System.getenv("BYEDPI_KEYSTORE_$key") ?: keystoreProps.getProperty(key.lowercase())
+
+val keystorePath = keystoreValue("PATH")
+val hasKeystore = !keystorePath.isNullOrBlank() && File(keystorePath).exists()
 
 android {
     namespace = "io.github.romanvht.byedpi"
@@ -32,8 +48,20 @@ android {
         viewBinding = true
     }
 
+    signingConfigs {
+        if (hasKeystore) {
+            create("release") {
+                storeFile = File(keystorePath!!)
+                storePassword = keystoreValue("STORE_PASSWORD")
+                keyAlias = keystoreValue("KEY_ALIAS")
+                keyPassword = keystoreValue("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (hasKeystore) signingConfig = signingConfigs.getByName("release")
             buildConfigField("String", "VERSION_NAME",  "\"${defaultConfig.versionName}\"")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             isMinifyEnabled = true
@@ -115,4 +143,20 @@ tasks.register<Exec>("runNdkBuild") {
 
 tasks.preBuild {
     dependsOn("runNdkBuild")
+}
+
+// Rename release artifacts to human-readable names, e.g.
+// app-arm64-v8a-release.apk -> ByeDpi-1.8.2-arm64-v8a.apk
+// (the universal split APK is named -all by AGP)
+tasks.configureEach {
+    if (name == "packageRelease") {
+        doLast {
+            val outDir = layout.buildDirectory.dir("outputs/apk/release").get().asFile
+            outDir.listFiles { f -> f.extension == "apk" }?.forEach { apk ->
+                val abi = Regex("app-(.+)-release\\.apk").find(apk.name)?.groupValues?.get(1) ?: return@forEach
+                val newName = "ByeDpi-${android.defaultConfig.versionName}-$abi.apk"
+                if (apk.name != newName) apk.renameTo(File(outDir, newName))
+            }
+        }
+    }
 }

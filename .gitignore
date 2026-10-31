@@ -12,6 +12,9 @@ build/
 
 # Local config
 local.properties
+keystore.properties
+*.keystore
+*.jks
 
 # Android
 /captures

@@ -27,7 +27,10 @@ class SiteResultAdapter : RecyclerView.Adapter<SiteResultAdapter.SiteViewHolder>
     override fun onBindViewHolder(holder: SiteViewHolder, position: Int) {
         val site = sites[position]
         holder.siteTextView.text = site.site
-        holder.resultTextView.text = "${site.successCount}/${site.totalCount}"
+        val latency = if (site.successCount > 0 && site.avgLatencyMs >= 0) {
+            " · ${site.avgLatencyMs} ms"
+        } else ""
+        holder.resultTextView.text = "${site.successCount}/${site.totalCount}$latency"
     }
 
     override fun getItemCount(): Int {

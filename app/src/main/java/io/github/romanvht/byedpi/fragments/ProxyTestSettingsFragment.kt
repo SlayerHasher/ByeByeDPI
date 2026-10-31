@@ -20,11 +20,13 @@ class ProxyTestSettingsFragment : PreferenceFragmentCompat() {
         setupNumberSummary("byedpi_proxytest_requests", R.string.proxytest_requests_desc)
         setupNumberSummary("byedpi_proxytest_limit", R.string.proxytest_limit_desc)
         setupNumberSummary("byedpi_proxytest_timeout", R.string.proxytest_timeout_desc)
+        setupNumberSummary("byedpi_proxytest_strategy_budget", R.string.proxytest_budget_desc)
 
         setEditTestPreferenceListenerInt("byedpi_proxytest_delay", 0, 10)
         setEditTestPreferenceListenerInt("byedpi_proxytest_requests", 1, 20)
         setEditTestPreferenceListenerInt("byedpi_proxytest_timeout", 1, 15)
         setEditTestPreferenceListenerInt("byedpi_proxytest_limit", 1, 50)
+        setEditTestPreferenceListenerInt("byedpi_proxytest_strategy_budget", 5, 600)
 
         setEditTestPreferenceListenerDomain("byedpi_proxytest_sni")
 
