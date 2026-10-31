@@ -26,6 +26,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build APK
@@ -114,7 +118,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ByeDpi-${{ env.VERSION }}-${{ env.BUILD_TYPE }}
+          name: ByeDpi-${{ env.TAG }}-${{ env.BUILD_TYPE }}
           path: apk-out/
 
       - name: Create GitHub Release and upload APKs

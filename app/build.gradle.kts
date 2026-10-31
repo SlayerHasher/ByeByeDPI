@@ -147,6 +147,7 @@ tasks.preBuild {
 
 // Rename release artifacts to human-readable names, e.g.
 // app-arm64-v8a-release.apk -> ByeDpi-1.8.2-arm64-v8a.apk
+// (the universal split APK is named -all by AGP)
 tasks.configureEach {
     if (name == "packageRelease") {
         doLast {
