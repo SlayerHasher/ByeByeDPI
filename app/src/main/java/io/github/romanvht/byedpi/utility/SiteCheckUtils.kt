@@ -64,6 +64,8 @@ class SiteCheckUtils(
      * the remaining requests can no longer reach it (early exit). Sites that failed
      * every request in previous strategies are skipped entirely thanks to the shared
      * failure cache, which substantially speeds up testing of many strategies.
+     * The callback and returned triples carry average successful-request latency in
+     * milliseconds (-1 when unknown), used to rank equally good strategies by speed.
      */
     suspend fun checkSitesAsync(
         sites: List<String>,
@@ -71,31 +73,33 @@ class SiteCheckUtils(
         requestTimeout: Long,
         concurrentRequests: Int = 20,
         fullLog: Boolean,
-        onSiteChecked: (suspend (String, Int, Int) -> Unit)? = null
-    ): List<Pair<String, Int>> {
+        onSiteChecked: (suspend (String, Int, Int, Long) -> Unit)? = null
+    ): List<Triple<String, Int, Long>> {
         val semaphore = Semaphore(concurrentRequests)
         return withContext(Dispatchers.IO) {
             coroutineScope {
                 sites.map { site ->
                     async {
                         val cachedFailures = failureCache[site] ?: 0
-                        val successCount = if (cachedFailures >= requestsCount) {
+                        val result = if (cachedFailures >= requestsCount) {
                             Log.i(TAG, "Cached failure for $site ($cachedFailures/$requestsCount)")
-                            0
+                            SiteOutcome(0, -1L)
                         } else {
                             checkSiteAccess(site, requestsCount, requestTimeout, semaphore, requestsCount - cachedFailures)
                         }
                         ensureActive()
-                        recordResult(site, successCount, requestsCount)
+                        recordResult(site, result.successCount, requestsCount)
                         if (fullLog) {
-                            onSiteChecked?.invoke(site, successCount, requestsCount)
+                            onSiteChecked?.invoke(site, result.successCount, requestsCount, result.avgLatencyMs)
                         }
-                        site to successCount
+                        Triple(site, result.successCount, result.avgLatencyMs)
                     }
                 }.awaitAll()
             }
         }
     }
+
+    data class SiteOutcome(val successCount: Int, val avgLatencyMs: Long)
 
     private suspend fun checkSiteAccess(
         site: String,
@@ -103,7 +107,7 @@ class SiteCheckUtils(
         timeout: Long,
         semaphore: Semaphore,
         requiredSuccesses: Int,
-    ): Int = coroutineScope {
+    ): SiteOutcome = coroutineScope {
         val formattedUrl = if (site.startsWith("http://") || site.startsWith("https://")) site
         else "https://$site"
 
@@ -111,10 +115,11 @@ class SiteCheckUtils(
             URL(formattedUrl)
         } catch (_: Exception) {
             Log.e(TAG, "Invalid URL: $formattedUrl")
-            return@coroutineScope 0
+            return@coroutineScope SiteOutcome(0, -1L)
         }
 
         val successCounter = java.util.concurrent.atomic.AtomicInteger(0)
+        val latencyMs = ConcurrentHashMap<Int, Long>()
         val jobs = List(requestsCount) { index ->
             async(Dispatchers.IO) {
                 // Early exit: the site outcome is already decided by completed and
@@ -125,11 +130,16 @@ class SiteCheckUtils(
                 }
                 semaphore.withPermit {
                     withTimeoutOrNull(timeout * 1000) {
-                        runCatching { performRequest(url) }.getOrElse { e ->
+                        val startedAt = System.nanoTime()
+                        val ok = runCatching { performRequest(url) }.getOrElse { e ->
                             if (e is CancellationException) throw e
                             Log.e(TAG, "Error accessing $site: ${e.message}")
                             false
                         }
+                        // Measure only successful requests: failures are dominated by
+                        // timeouts/RSTs and would distort the latency comparison.
+                        if (ok) latencyMs[index] = (System.nanoTime() - startedAt) / 1_000_000L
+                        ok
                     } ?: run {
                         Log.w(TAG, "Timeout for $site")
                         false
@@ -152,7 +162,9 @@ class SiteCheckUtils(
         jobs.forEach { it.cancel() }
         val results = jobs.map { runCatching { it.await() }.getOrDefault(false) }
 
-        results.count { it }
+        val latencies = latencyMs.values
+        val avgLatencyMs = if (latencies.isEmpty()) -1L else latencies.average().toLong()
+        SiteOutcome(results.count { it }, avgLatencyMs)
     }
 
     private fun performRequest(url: URL): Boolean =

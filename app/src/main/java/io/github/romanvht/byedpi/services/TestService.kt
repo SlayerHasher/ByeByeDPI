@@ -281,11 +281,21 @@ class TestService : Service() {
                             requestTimeout = settings.requestTimeout,
                             concurrentRequests = settings.requestLimit,
                             fullLog = true,
-                            onSiteChecked = { site, successCount, countRequests ->
+                            onSiteChecked = { site, successCount, countRequests, avgLatencyMs ->
                                 withContext(Dispatchers.Main.immediate) {
                                     strategy.currentProgress += countRequests
                                     strategy.successCount += successCount
-                                    strategy.siteResults.add(SiteResult(site, successCount, countRequests))
+                                    strategy.siteResults.add(SiteResult(site, successCount, countRequests, avgLatencyMs))
+                                    if (avgLatencyMs >= 0) {
+                                        // Weighted average of successful-request latency
+                                        val prev = strategy.avgLatencyMs
+                                        val prevSuccesses = strategy.successCount - successCount
+                                        strategy.avgLatencyMs = if (prev < 0 || prevSuccesses <= 0) {
+                                            avgLatencyMs
+                                        } else {
+                                            (prev * prevSuccesses + avgLatencyMs * successCount) / strategy.successCount
+                                        }
+                                    }
                                     publish(strategies)
                                 }
                             }
@@ -360,6 +370,7 @@ class TestService : Service() {
     private fun resetStrategyResult(strategy: StrategyResult, settings: TestSettings) {
         strategy.successCount = 0
         strategy.currentProgress = 0
+        strategy.avgLatencyMs = -1L
         strategy.siteResults.clear()
         strategy.siteResults.addAll(settings.sites.map { SiteResult(it, 0, settings.requestsCount) })
     }
