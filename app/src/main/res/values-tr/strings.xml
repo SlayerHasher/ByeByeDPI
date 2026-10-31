@@ -156,6 +156,7 @@
     <string name="test_requests">Alan adı istek sayısı</string>
     <string name="test_requests_limit">Maksimum paralel istek sayısı</string>
     <string name="test_timeout">Alan adı yanıt zaman aşımı</string>
+    <string name="test_strategy_budget">Strateji başına toplam süre</string>
     <string name="test_show_details">Detayları göster</string>
     <string name="test_hide_details">Detayları gizle</string>
     <string name="test_expand">Genişlet</string>
@@ -168,6 +169,7 @@
     <string name="proxytest_requests_desc">Daha yüksek bir sayı doğruluğu artırır ama stabiliteyi azaltabilir</string>
     <string name="proxytest_limit_desc">Daha yüksek bir sayı testi hızlandırır ama stabiliteyi azaltabilir</string>
     <string name="proxytest_timeout_desc">Daha yüksek bir sayı testi yavaşlatır ama stabiliteyi artırır</string>
+    <string name="proxytest_budget_desc">Daha düşük bir sayı testi hızlandırır ancak yavaş kontrolleri kesebilir</string>
     <string name="domain_lists">Alan Adı Listeleri</string>
     <string name="domain_lists_summary">Test için alan adı listelerini ekleyin, düzenleyin veya kaldırın</string>
     <string name="domain_list_add_new">Yeni Liste Ekle</string>

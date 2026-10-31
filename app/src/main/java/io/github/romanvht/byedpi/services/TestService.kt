@@ -188,6 +188,7 @@ class TestService : Service() {
                 }
                 strategies.addAll(options.commands.map { StrategyResult(command = it) })
                 prepared = true
+                SiteCheckUtils.resetCache()
                 getPreferences().edit(commit = true) { putBoolean("is_test_running", true) }
                 publish(strategies, 0)
                 ServiceManager.waitStop()
@@ -271,21 +272,25 @@ class TestService : Service() {
                         "::", "[::]" -> "::1"
                         else -> configuration.host
                     }
-                    SiteCheckUtils(host, configuration.port).checkSitesAsync(
-                        sites = settings.sites,
-                        requestsCount = settings.requestsCount,
-                        requestTimeout = settings.requestTimeout,
-                        concurrentRequests = settings.requestLimit,
-                        fullLog = true,
-                        onSiteChecked = { site, successCount, countRequests ->
-                            withContext(Dispatchers.Main.immediate) {
-                                strategy.currentProgress += countRequests
-                                strategy.successCount += successCount
-                                strategy.siteResults.add(SiteResult(site, successCount, countRequests))
-                                publish(strategies)
+                    // Hard time budget per strategy: protects the whole test run from
+                    // a hung engine or extremely slow sites; partial results are kept.
+                    withTimeoutOrNull(settings.strategyBudget * 1000) {
+                        SiteCheckUtils(host, configuration.port).checkSitesAsync(
+                            sites = settings.sites,
+                            requestsCount = settings.requestsCount,
+                            requestTimeout = settings.requestTimeout,
+                            concurrentRequests = settings.requestLimit,
+                            fullLog = true,
+                            onSiteChecked = { site, successCount, countRequests ->
+                                withContext(Dispatchers.Main.immediate) {
+                                    strategy.currentProgress += countRequests
+                                    strategy.successCount += successCount
+                                    strategy.siteResults.add(SiteResult(site, successCount, countRequests))
+                                    publish(strategies)
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                     true
                 }
                 try {
@@ -346,9 +351,10 @@ class TestService : Service() {
         val requestsCount = prefs.getIntStringNotNull("byedpi_proxytest_requests", 1).coerceAtLeast(1)
         val requestTimeout = prefs.getLongStringNotNull("byedpi_proxytest_timeout", 5).coerceAtLeast(1)
         val requestLimit = prefs.getIntStringNotNull("byedpi_proxytest_limit", 20).coerceAtLeast(1)
+        val strategyBudget = prefs.getLongStringNotNull("byedpi_proxytest_strategy_budget", 60).coerceIn(5, 600)
         DomainListUtils.syncLists(this)
         return TestSettings(DomainListUtils.getActiveDomains(this).toList(), commands, host, port,
-            delaySec, requestsCount, requestTimeout, requestLimit)
+            delaySec, requestsCount, requestTimeout, requestLimit, strategyBudget)
     }
 
     private fun resetStrategyResult(strategy: StrategyResult, settings: TestSettings) {

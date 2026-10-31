@@ -156,6 +156,7 @@
     <string name="test_requests">Number of domain requests</string>
     <string name="test_requests_limit">Maximum parallel requests</string>
     <string name="test_timeout">Domain response timeout</string>
+    <string name="test_strategy_budget">Total time budget per strategy</string>
     <string name="test_show_details">Show details</string>
     <string name="test_hide_details">Hide details</string>
     <string name="test_expand">Expand</string>
@@ -168,6 +169,7 @@
     <string name="proxytest_requests_desc">A higher number increases accuracy but may reduce stability</string>
     <string name="proxytest_limit_desc">A higher number increases test speed but may reduce stability</string>
     <string name="proxytest_timeout_desc">A higher number reduces test speed but improves stability</string>
+    <string name="proxytest_budget_desc">A lower value speeds up the test but may cut off slow checks</string>
     <string name="domain_lists">Domain Lists</string>
     <string name="domain_lists_summary">Managing domain lists for testing</string>
     <string name="domain_list_add_new">Add new list</string>
