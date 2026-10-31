@@ -27,9 +27,6 @@ on:
 permissions:
   contents: write
 
-env:
-  TAG: ${{ github.event.inputs.tag }}
-
 jobs:
   build:
     name: Build APK
@@ -44,21 +41,31 @@ jobs:
           version=$(grep 'versionName = ' app/build.gradle.kts | sed 's/.*versionName = "\(.*\)".*/\1/')
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
-      - name: Determine build type and tag
+      - name: Set build type and tag
+        if: always()
+        env:
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          INPUT_BUILD_TYPE: ${{ github.event.inputs.build_type }}
+          INPUT_PRERELEASE: ${{ github.event.inputs.prerelease }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          SHA: ${{ github.sha }}
         run: |
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          if [[ "$REF" == refs/tags/v* ]]; then
             echo "BUILD_TYPE=release" >> "$GITHUB_ENV"
             echo "PRERELEASE=false" >> "$GITHUB_ENV"
-            echo "TAG=${{ github.ref_name }}" >> "$GITHUB_ENV"
-          elif [[ "${{ github.event.inputs.build_type }}" == "debug" ]]; then
+            echo "TAG=$REF_NAME" >> "$GITHUB_ENV"
+          elif [[ "$INPUT_BUILD_TYPE" == "debug" ]]; then
             echo "BUILD_TYPE=debug" >> "$GITHUB_ENV"
             echo "PRERELEASE=true" >> "$GITHUB_ENV"
-            echo "TAG=nightly" >> "$GITHUB_ENV"
+            echo "TAG=${INPUT_TAG:-nightly}" >> "$GITHUB_ENV"
           else
             echo "BUILD_TYPE=release" >> "$GITHUB_ENV"
-            echo "PRERELEASE=${{ github.event.inputs.prerelease || 'true' }}" >> "$GITHUB_ENV"
-            if [[ -z "$TAG" ]]; then
-              short_sha=$(echo "${{ github.sha }}" | cut -c1-7)
+            echo "PRERELEASE=${INPUT_PRERELEASE:-true}" >> "$GITHUB_ENV"
+            if [[ -n "$INPUT_TAG" ]]; then
+              echo "TAG=$INPUT_TAG" >> "$GITHUB_ENV"
+            else
+              short_sha=$(echo "$SHA" | cut -c1-7)
               echo "TAG=v${VERSION}-${short_sha}" >> "$GITHUB_ENV"
             fi
           fi
