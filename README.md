@@ -52,6 +52,25 @@ git clone --recurse-submodules
 
 > P.S.: hev_socks5_tunnel не соберется под Windows, вам нужно будет использовать WSL
 
+#### Автоматическая сборка и публикация APK (GitHub Actions)
+
+Репозиторий содержит workflow `.github/workflows/build.yml`, который собирает APK и автоматически прикреплляет их к GitHub Release:
+
+- **Релиз**: создайте и запушьте тег вида `v1.8.2` — соберутся release-APK (universal + по ABI), создастся Release с файлами и SHA-256 суммами.
+- **Мастер / вручную**: push в `master` или запуск через вкладку *Actions → Build APK → Run workflow* создаст pre-release (тег автогенерируется из версии и короткого коммита, можно задать свой).
+- **Подпись release-APK** (опционально): без ключей APK собираются неподписанными. Чтобы подписывать, добавьте в репозитории *Settings → Secrets and variables → Actions* секреты:
+  - `BYEDPI_KEYSTORE_BASE64` — keystore, закодированный в base64 (`base64 -w0 byedpi.keystore`);
+  - `BYEDPI_KEYSTORE_STORE_PASSWORD`, `BYEDPI_KEYSTORE_KEY_ALIAS`, `BYEDPI_KEYSTORE_KEY_PASSWORD`.
+
+Для локальной подписи можно создать `keystore.properties` в корне проекта (файл добавлен в `.gitignore`):
+
+```properties
+storeFile=/path/to/byedpi.keystore
+storePassword=...
+keyAlias=...
+keyPassword=...
+```
+
 ### Хеш подписи
 SHA-256:
 `77:45:10:75:AC:EA:40:64:06:47:5D:74:D4:59:88:3A:49:A6:40:51:FA:F3:2E:42:F7:18:F3:F9:77:7A:8D:FB`
